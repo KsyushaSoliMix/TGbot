@@ -5,14 +5,11 @@ from telebot import types
 # Токен и создание бота
 token = '5305392177:AAGRLxjBJ43TgZSo7qC8XoXRJ75bKCzh7Fk'
 bot = telebot.TeleBot(token)
-# -------------------------------------------------------
+# ----------------------------------------------------------
 
 # Переменные для команд
-start_line = "Привет ✌ \n" \
-             "Study language bot поможет тебе в изучении разных иностранных языков.\n" \
-             "Введи /help для того, чтобы посмотреть функционал."
 
-languages = "English", "Deutsch", "Русский"
+languages = "🇬🇧 English", "🇩🇪 Deutsch", "🇷🇺 Русский"
 
 help_line = "/newLanguage - добавляет новый язык.\n" \
             "/study *язык* - команда для продолжения изучения языка."
@@ -23,7 +20,9 @@ help_line = "/newLanguage - добавляет новый язык.\n" \
 
 @bot.message_handler(commands=['start'])
 def start_message(message):
-    bot.send_message(message.chat.id, start_line)
+    bot.send_message(message.chat.id, "Привет " + message.from_user.first_name  +"!\n" \
+             "Study language bot поможет тебе в изучении разных иностранных языков.\n" \
+             "Введи /help для того, чтобы посмотреть функционал.")
 
 
 @bot.message_handler(commands=['help'])
@@ -31,8 +30,9 @@ def help_message(message):
     bot.send_message(message.chat.id, help_line)
 
 
+# Выбор языков:
 @bot.message_handler(commands=['newLanguage'])
-def newLanguage_message(message):
+def new_language_message(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     for i in range(0, len(languages)):
         item = types.KeyboardButton(languages[i])
@@ -41,11 +41,13 @@ def newLanguage_message(message):
 
 
 @bot.message_handler(content_types=['text'])
-def hello(message):
-    if message.text == "Hello":
-        bot.send_message(message.chat.id, message.text)
-    elif message.text == "Привет":
-        bot.send_message(message.chat.id, "Ненавижу глупых русских!!!")
+def languages_handling(message):
+    if (message.text == "🇬🇧 English"):
+        bot.send_message(message.chat.id, 'Now you are a englishman')
+    elif (message.text == "🇩🇪 Deutsch"):
+        bot.send_message(message.chat.id, 'Jetzt du bist Deutsch Person')
+    elif (message.text == "🇷🇺 Русский"):
+        bot.send_message(message.chat.id, 'Уйди отсюда, пидор грязный')
 
-
+# ----------------------------------------------------------
 bot.polling(none_stop=True)
