@@ -1,8 +1,10 @@
 # Библиотеки
 import telebot
 from telebot import types
+import sqllite_db
 
 # Токен и создание бота
+
 token = '5305392177:AAGRLxjBJ43TgZSo7qC8XoXRJ75bKCzh7Fk'
 bot = telebot.TeleBot(token)
 # ----------------------------------------------------------
@@ -15,17 +17,29 @@ help_line = "/new_language - добавляет новый язык.\n" \
             "/my_languages - показывает уже изучаемые вами языки\n" \
             "/study *язык* - команда для продолжения изучения языка.\n"
 
+create_users = """
+INSERT INTO users 
+   (user_id, name, languages)
+VALUES (?, ?, ?);"""
 # ----------------------------------------------------------
 
 my_languages = []
 
 
+
 @bot.message_handler(commands=['start'])
 def start_message(message):
-    bot.send_message(message.chat.id, "Привет " + message.from_user.first_name + "!\n" \
-                                                                                 "Study language bot поможет тебе в изучении разных иностранных языков.\n" \
-                                                                                 "Введи /help для того, чтобы посмотреть функционал.")
-
+    # Создаем нового юзера и добавляем его в базу данных, с проверкой на то, был ли он до этого зарегестрирован
+    info = sqllite_db.cursor.execute('SELECT * FROM users WHERE user_id=?', (message.from_user.id,))
+    if info.fetchone() is None:
+        bot.send_message(message.chat.id, "Привет " + message.from_user.first_name + "!\n" \
+                                                                                     "Study language bot поможет тебе в изучении разных иностранных языков.\n" \
+                                                                                     "Введи /help для того, чтобы посмотреть функционал.")
+        person_data = (message.from_user.id, message.from_user.first_name, "")
+        sqllite_db.cursor.execute(create_users, person_data)
+        sqllite_db.connection.commit()
+    else:
+        bot.send_message(message.chat.id, "Привет " + message.from_user.first_name + "! Готов продолжить обучение?\n Вводи команду /study и поехали!!!")
 
 @bot.message_handler(commands=['help'])
 def help_message(message):
