@@ -14,8 +14,22 @@ def create_connection(path):  # Создаем функцию для соеди�
 
 
 # Соединяемся с бд
-connection = create_connection("C:\\Users\StariyMicrozavr\PycharmProjects\TGbot\DataBases\sm_app.sqlite")
-
+connection = create_connection("C:\\Users\\temas\\PycharmProjects\\TGbot\\DataBases\\sm_app.sqlite")
 cursor = connection.cursor()
+def execute_query(connection, query):
+    try:
+        cursor.execute(query)
+        connection.commit()
+        print("Query executed successfully")
+    except Error as e:
+        print(f"The error '{e}' occurred")
 
+create_users_table = """
+CREATE TABLE IF NOT EXISTS users (
+  user_id INTEGER,
+  languages TEXT
+);
+"""
+
+execute_query(connection, create_users_table)
 

@@ -3,6 +3,7 @@ import re
 
 import telebot
 from telebot import types
+
 import sqllite_db
 
 # Токен и создание бота
@@ -85,7 +86,7 @@ def new_language_message(message):
 @bot.message_handler(commands=['my_languages'])
 def get_my_languages_message(message):
     users_languages = get_languages(message.from_user.id)
-    split_user_languages = re.split(" ", users_languages)
+    split_user_languages = re.split("&", users_languages)
     help_string = ""
     for i in range(0, len(split_user_languages)):
         help_string += split_user_languages[i] + "\n"
