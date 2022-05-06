@@ -25,7 +25,13 @@ INSERT INTO users
    (user_id, languages)
 VALUES (?, ?);"""
 
-
+# ----------------------------------------------------------
+#Функции для работы кода
+def convert_to_binary_data(filename):
+    # Преобразование данных в двоичный формат
+    with open(filename, 'rb') as file:
+        blob_data = file.read()
+    return blob_data
 
 # ----------------------------------------------------------
 
@@ -34,6 +40,7 @@ VALUES (?, ?);"""
 def start_message(message):
     # Создаем нового юзера и добавляем его в базу данных, с проверкой на то, был ли он до этого зарегестрирован
     info = sqllite_db.cursor.execute('SELECT * FROM users WHERE user_id=?', (message.from_user.id,))
+    #Path('files/{}.txt'.format(message.chat.id)).touch()
     info.fetchone()
     if info.fetchone() is None:
         bot.send_message(message.chat.id, "Привет " + message.from_user.first_name + "!\n" \
@@ -63,7 +70,8 @@ def set_language(user_id, language):
     help_language = get_languages(user_id) + language + "&"
     sqllite_db.cursor.execute('UPDATE users SET languages = ? WHERE user_id = ?', (help_language, user_id))
     sqllite_db.connection.commit()
-    print(get_languages(user_id))
+
+
 
 
 # Выбор языков:
@@ -72,7 +80,7 @@ def new_language_message(message):
     users_languages = get_languages(message.from_user.id)
     split_user_languages = re.split("&", users_languages)
     other_languages = languages
-    print(split_user_languages)
+
     for i in range(0, len(split_user_languages)):
         if other_languages.__contains__(split_user_languages[i]):
             other_languages.remove(split_user_languages[i])
@@ -90,12 +98,29 @@ def get_my_languages_message(message):
     help_string = ""
     for i in range(0, len(split_user_languages)):
         help_string += split_user_languages[i] + "\n"
-    print(help_string)
+
     if help_string == "\n":
         bot.send_message(message.chat.id, "Вы еще не выбрали ни одного языка :(")
     else:
         bot.send_message(message.chat.id, help_string)
-
+#делаем словарь для пользователя
+@bot.message_handler(commands=['add'])
+def creating_quiz(message):
+    users_languages = get_languages(message.from_user.id)
+    split_user_languages = re.split("&", users_languages)
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    for i in range(0, len(split_user_languages)):
+        split_user_languages[i] = split_user_languages[i][3:]
+    for i in range(0, len(split_user_languages)):
+        item = types.KeyboardButton(split_user_languages[i])
+        markup.add(item)
+    bot.send_message(message.chat.id, "Выберите язык", reply_markup=markup)
+#
+# #создание квиза на основе бд словаря
+# @bot.message_handler(commands=['quiz'])
+# def creating_quiz(message):
+##возвращает файл со словами пользователю
+#
 
 @bot.message_handler(content_types=['text'])
 def languages_handling(message):
@@ -111,6 +136,10 @@ def languages_handling(message):
     elif message.text == "🇷🇺 Русский":
         bot.send_message(message.chat.id, 'Уйди отсюда, пидор грязный')
 
+@bot.message_handler(content_types=['text'])
+def vocab_handling(message):
+    a = telebot.types.ReplyKeyboardRemove()
+    if message.text == "English":
 
 # ----------------------------------------------------------
 bot.polling(none_stop=True)
