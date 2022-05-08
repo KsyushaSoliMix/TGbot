@@ -1,7 +1,9 @@
 # Библиотеки
 import re
-
+from pathlib import Path
 import telebot
+import os
+import sqlite3
 from telebot import types
 
 import sqllite_db
@@ -22,42 +24,10 @@ help_line = "/new_language - добавляет новый язык.\n" \
 
 create_users = """
 INSERT INTO users 
-   (user_id, languages)
-VALUES (?, ?);"""
+   (user_id, languages,vocabulary_eng, vocabulary_deu)
+VALUES (?, ?, ?, ?);"""
 
 # ----------------------------------------------------------
-#Функции для работы кода
-def convert_to_binary_data(filename):
-    # Преобразование данных в двоичный формат
-    with open(filename, 'rb') as file:
-        blob_data = file.read()
-    return blob_data
-
-# ----------------------------------------------------------
-
-
-@bot.message_handler(commands=['start'])
-def start_message(message):
-    # Создаем нового юзера и добавляем его в базу данных, с проверкой на то, был ли он до этого зарегестрирован
-    info = sqllite_db.cursor.execute('SELECT * FROM users WHERE user_id=?', (message.from_user.id,))
-    #Path('files/{}.txt'.format(message.chat.id)).touch()
-    info.fetchone()
-    if info.fetchone() is None:
-        bot.send_message(message.chat.id, "Привет " + message.from_user.first_name + "!\n" \
-                                                                                     "Study language bot поможет тебе в изучении разных иностранных языков.\n" \
-                                                                                     "Введи /help для того, чтобы посмотреть функционал.")
-        person_data = (message.from_user.id, "")
-        sqllite_db.cursor.execute(create_users, person_data)
-        sqllite_db.connection.commit()
-    else:
-        bot.send_message(message.chat.id,
-                         "Привет " + message.from_user.first_name + "! Готов продолжить обучение?\nВводи команду /study и поехали!!!")
-
-
-@bot.message_handler(commands=['help'])
-def help_message(message):
-    bot.send_message(message.chat.id, help_line)
-
 
 # Функции для получения и сохранения языков:
 def get_languages(user_id):
@@ -71,8 +41,38 @@ def set_language(user_id, language):
     sqllite_db.cursor.execute('UPDATE users SET languages = ? WHERE user_id = ?', (help_language, user_id))
     sqllite_db.connection.commit()
 
+# ----------------------------------------------------------
 
 
+@bot.message_handler(commands=['start'])
+def start_message(message):
+    # Создаем нового юзера и добавляем его в базу данных, с проверкой на то, был ли он до этого зарегестрирован
+    info = sqllite_db.cursor.execute('SELECT * FROM users WHERE user_id=?', (message.from_user.id,))
+
+    info.fetchone()
+    if info.fetchone() is None:
+        bot.send_message(message.chat.id, "Привет " + message.from_user.first_name + "!\n" \
+                                                                                     "Study language bot поможет тебе в изучении разных иностранных языков.\n" \
+                                                                                     "Введи /help для того, чтобы посмотреть функционал.")
+        Path('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_eng.txt'.format(message.chat.id)).touch()
+        # open('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_eng.txt'.format(message.chat.id), "w").write("English vocabulary")
+        file_eng = open('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_eng.txt'.format(message.chat.id), "rb").read()
+
+        Path('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_deu.txt'.format(message.chat.id)).touch()
+
+        file_deu = open('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_deu.txt'.format(message.chat.id), "rb").read()
+
+        person_data = (message.from_user.id, "", sqlite3.Binary(file_eng), sqlite3.Binary(file_deu))
+        sqllite_db.cursor.execute(create_users, person_data)
+        sqllite_db.connection.commit()
+    else:
+        bot.send_message(message.chat.id,
+                         "Привет " + message.from_user.first_name + "! Готов продолжить обучение?\nВводи команду /study и поехали!!!")
+
+
+@bot.message_handler(commands=['help'])
+def help_message(message):
+    bot.send_message(message.chat.id, help_line)
 
 # Выбор языков:
 @bot.message_handler(commands=['new_language'])
@@ -129,17 +129,29 @@ def languages_handling(message):
         str = "🇬🇧 English"
         bot.send_message(message.chat.id, 'Now you are a englishman', reply_markup=a)
         set_language(message.from_user.id, str)
+        # file = Path('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_eng.txt'.format(message.chat.id)).touch()
+        # done_file = convert_to_binary_data('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_eng.txt'.format(message.chat.id))
+        # sqllite_db.cursor.execute('UPDATE users SET vocabulary_eng = ? WHERE user_id = ?', (done_file, user_id))
+        # sqllite_db.connection.commit()
+
+
     elif message.text == "🇩🇪 Deutsch":
         str = "🇩🇪 Deutsch"
         bot.send_message(message.chat.id, 'Jetzt du bist Deutsch Person', reply_markup=a)
         set_language(message.from_user.id, str)
+        # file = Path('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_deu.txt'.format(message.chat.id)).touch()
+        # done_file = convert_to_binary_data(file)
+        #
+        # sqllite_db.cursor.execute('UPDATE users SET vocabulary_deu = ? WHERE user_id = ?',
+        #                           (done_file, message.from_user.id))
+        # sqllite_db.connection.commit()
     elif message.text == "🇷🇺 Русский":
         bot.send_message(message.chat.id, 'Уйди отсюда, пидор грязный')
 
-@bot.message_handler(content_types=['text'])
-def vocab_handling(message):
-    a = telebot.types.ReplyKeyboardRemove()
-    if message.text == "English":
+# @bot.message_handler(content_types=['text'])
+# def vocab_handling(message):
+#     a = telebot.types.ReplyKeyboardRemove()
+#     if message.text == "English":
 
 # ----------------------------------------------------------
 bot.polling(none_stop=True)

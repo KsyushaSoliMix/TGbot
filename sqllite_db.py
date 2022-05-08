@@ -27,7 +27,9 @@ def execute_query(connection, query):
 create_users_table = """
 CREATE TABLE IF NOT EXISTS users (
   user_id INTEGER,
-  languages TEXT
+  languages TEXT,
+  vocabulary_eng BLOB,
+  vocabulary_deu BLOB
 );
 """
 
