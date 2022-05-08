@@ -54,15 +54,8 @@ def start_message(message):
         bot.send_message(message.chat.id, "Привет " + message.from_user.first_name + "!\n" \
                                                                                      "Study language bot поможет тебе в изучении разных иностранных языков.\n" \
                                                                                      "Введи /help для того, чтобы посмотреть функционал.")
-        Path('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_eng.txt'.format(message.chat.id)).touch()
-        # open('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_eng.txt'.format(message.chat.id), "w").write("English vocabulary")
-        file_eng = open('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_eng.txt'.format(message.chat.id), "rb").read()
 
-        Path('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_deu.txt'.format(message.chat.id)).touch()
-
-        file_deu = open('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_deu.txt'.format(message.chat.id), "rb").read()
-
-        person_data = (message.from_user.id, "", sqlite3.Binary(file_eng), sqlite3.Binary(file_deu))
+        person_data = (message.from_user.id, "", None,None)
         sqllite_db.cursor.execute(create_users, person_data)
         sqllite_db.connection.commit()
     else:
@@ -131,20 +124,30 @@ def languages_handling(message):
         set_language(message.from_user.id, str)
         # file = Path('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_eng.txt'.format(message.chat.id)).touch()
         # done_file = convert_to_binary_data('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_eng.txt'.format(message.chat.id))
-        # sqllite_db.cursor.execute('UPDATE users SET vocabulary_eng = ? WHERE user_id = ?', (done_file, user_id))
+        # sqllite_db.cursor.execute('UPDATE users SET vocabulary_eng = ? WHERE user_id = ?', (sqlite3.Binary(file_eng), user_id))
         # sqllite_db.connection.commit()
+        Path('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_eng.txt'.format(message.chat.id)).touch()
+        open('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_eng.txt'.format(message.chat.id), "w").write(
+            "English vocabulary")
+        file_eng = open('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_eng.txt'.format(message.chat.id),
+                        "rb").read()
+        sqllite_db.cursor.execute('UPDATE users SET vocabulary_eng = ? WHERE user_id = ?',
+                                  (sqlite3.Binary(file_eng), message.from_user.id))
+        sqllite_db.connection.commit()
 
 
     elif message.text == "🇩🇪 Deutsch":
         str = "🇩🇪 Deutsch"
         bot.send_message(message.chat.id, 'Jetzt du bist Deutsch Person', reply_markup=a)
         set_language(message.from_user.id, str)
-        # file = Path('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_deu.txt'.format(message.chat.id)).touch()
-        # done_file = convert_to_binary_data(file)
-        #
-        # sqllite_db.cursor.execute('UPDATE users SET vocabulary_deu = ? WHERE user_id = ?',
-        #                           (done_file, message.from_user.id))
-        # sqllite_db.connection.commit()
+        Path('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_deu.txt'.format(message.chat.id)).touch()
+        open('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_deu.txt'.format(message.chat.id), "w").write(
+            "Deutch vocabulary")
+        file_eng = open('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_deu.txt'.format(message.chat.id),
+                        "rb").read()
+        sqllite_db.cursor.execute('UPDATE users SET vocabulary_deu = ? WHERE user_id = ?',
+                                  (sqlite3.Binary(file_eng), message.from_user.id))
+        sqllite_db.connection.commit()
     elif message.text == "🇷🇺 Русский":
         bot.send_message(message.chat.id, 'Уйди отсюда, пидор грязный')
 
