@@ -5,7 +5,8 @@ import telebot
 import os
 import sqlite3
 from telebot import types
-
+import googletrans
+from googletrans import Translator
 import sqllite_db
 
 # Токен и создание бота
@@ -28,6 +29,7 @@ INSERT INTO users
 VALUES (?, ?, ?, ?);"""
 
 # ----------------------------------------------------------
+translator = Translator()
 
 # Функции для получения и сохранения языков:
 def get_languages(user_id):
@@ -41,6 +43,30 @@ def set_language(user_id, language):
     sqllite_db.cursor.execute('UPDATE users SET languages = ? WHERE user_id = ?', (help_language, user_id))
     sqllite_db.connection.commit()
 
+def write_to_file(data, filename):
+    # Преобразование двоичных данных в нужный формат
+    with open(filename, 'wb') as file:
+        file.write(data)
+
+#сюда закидывается слово из vocab_eng
+def after_text_2(message):
+   mes=message.text
+   info = sqllite_db.cursor.execute('SELECT * FROM users WHERE user_id=?', (message.from_user.id,))
+   record = info.fetchall()
+   for row in record:
+       file = row[2]
+   vocab_path = Path('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_eng.txt'.format(message.chat.id))
+   write_to_file(file, vocab_path)
+   # теперь у нас в файле с компа записаны данные, которые лежат в бд
+   #теперь надо добавить новое слово
+   result = translator.translate(mes, src="en", dest="ru")
+   with open(vocab_path, 'a') as file:
+       file.write("\n"+mes+" - "+result.text)
+   file_eng = open('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_eng.txt'.format(message.chat.id),
+                   "rb").read()
+   sqllite_db.cursor.execute('UPDATE users SET vocabulary_eng = ? WHERE user_id = ?',
+                             (sqlite3.Binary(file_eng), message.from_user.id))
+   sqllite_db.connection.commit()
 # ----------------------------------------------------------
 
 
@@ -58,6 +84,7 @@ def start_message(message):
         person_data = (message.from_user.id, "", None,None)
         sqllite_db.cursor.execute(create_users, person_data)
         sqllite_db.connection.commit()
+
     else:
         bot.send_message(message.chat.id,
                          "Привет " + message.from_user.first_name + "! Готов продолжить обучение?\nВводи команду /study и поехали!!!")
@@ -108,12 +135,53 @@ def creating_quiz(message):
         item = types.KeyboardButton(split_user_languages[i])
         markup.add(item)
     bot.send_message(message.chat.id, "Выберите язык", reply_markup=markup)
-#
-# #создание квиза на основе бд словаря
-# @bot.message_handler(commands=['quiz'])
-# def creating_quiz(message):
-##возвращает файл со словами пользователю
-#
+
+
+@bot.message_handler(commands=['vocab_eng'])
+def add_to_eng_vocabulary(message):
+    #теперь у нас есть данные из блоба в нашем файле на компе, теперь мы работаем с vocab_path файлом, в него
+    #будем записывать данные пользователя
+    keyboard1 = telebot.types.ReplyKeyboardMarkup(True)
+    msg = bot.send_message(message.from_user.id, "Запиши слово, которое хочешь добавить в словарь в таком формате: *слово*", reply_markup = keyboard1)
+    bot.register_next_step_handler(msg, after_text_2)
+
+
+
+@bot.message_handler(commands=['get_eng_vocab'])
+def new_language_message(message):
+    info = sqllite_db.cursor.execute('SELECT * FROM users WHERE user_id=?', (message.from_user.id,))
+    record = info.fetchall()
+    for row in record:
+        file = row[2]
+    vocab_path = Path('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_eng.txt'.format(message.chat.id))
+    write_to_file(file, vocab_path)
+    f = open(vocab_path, "rb")
+    bot.send_document(message.chat.id, f)
+
+@bot.message_handler(commands=['quiz'])
+def new_language_message(message):
+    info = sqllite_db.cursor.execute('SELECT * FROM users WHERE user_id=?', (message.from_user.id,))
+    record = info.fetchall()
+    for row in record:
+        file = row[2]
+    vocab_path = Path('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_eng.txt'.format(message.chat.id))
+    write_to_file(file, vocab_path)
+    dictionary = {}
+
+    with open(vocab_path,"r") as file1:
+        file1.readline()
+        while True:
+            # считываем строку
+            line = file1.readline()
+            # прерываем цикл, если строка пустая
+            if not line:
+                break
+
+            words = line.split(" - ")
+            orig_word = words[0]
+            translated_word = words[1]
+            dictionary[orig_word] = translated_word
+    print(dictionary)
 
 @bot.message_handler(content_types=['text'])
 def languages_handling(message):
@@ -150,11 +218,6 @@ def languages_handling(message):
         sqllite_db.connection.commit()
     elif message.text == "🇷🇺 Русский":
         bot.send_message(message.chat.id, 'Уйди отсюда, пидор грязный')
-
-# @bot.message_handler(content_types=['text'])
-# def vocab_handling(message):
-#     a = telebot.types.ReplyKeyboardRemove()
-#     if message.text == "English":
 
 # ----------------------------------------------------------
 bot.polling(none_stop=True)
