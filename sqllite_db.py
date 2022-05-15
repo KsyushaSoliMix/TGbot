@@ -28,8 +28,8 @@ create_users_table = """
 CREATE TABLE IF NOT EXISTS users (
   user_id INTEGER,
   languages TEXT,
-  vocabulary_eng BLOB,
-  vocabulary_deu BLOB
+  vocabulary_eng TEXT,
+  vocabulary_deu TEXT
 );
 """
 
