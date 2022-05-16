@@ -184,6 +184,7 @@ def new_language_message(message):
         i = random.randint(0,4)
         correct_word = translator.translate(words[i],  src='en', dest='ru')
         #это для проверки после ввода пользователя
+
         correct_word_in_russian = correct_word.text
         #это для создания самого квиза, то есть по какому слову мы делаем квиз
         correct_word_in_english = words[i]
@@ -194,15 +195,19 @@ def new_language_message(message):
             translated_words.append(result1.text)
         print(translated_words)
         print(correct_word_in_russian)
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        for j in range(len(words)):
+        markup = types.InlineKeyboardMarkup()
+        for j in range(len(translated_words)):
             # the actual creation of the button
-            item = types.KeyboardButton(translated_words[j])
+            if translated_words[j]==correct_word_in_russian:
+                item = types.InlineKeyboardButton(text=translated_words[j], callback_data="quiz_eng_right")
+            else:
+                item = types.InlineKeyboardButton(text=translated_words[j], callback_data="quiz_eng_wrong")
             markup.add(item)
         bot.send_message(message.chat.id, "Выберите перевод слова "+correct_word_in_english, reply_markup=markup)
-        @bot.message_handler(content_types=['text'])
-        if message.text == correct_word_in_russian:
-            print("Правильно!")
+        words=[]
+        translated_words=[]
+
+
 
 
 @bot.message_handler(content_types=['text'])
@@ -238,5 +243,15 @@ def languages_handling(message):
 def send_study(call):
     bot.send_message(call.message.chat.id,'Чтобы продолжить обучение, жми /study')
 
+
+@bot.callback_query_handler(func=lambda call: call.data == 'quiz_eng_right')
+def send_study(call):
+
+    bot.send_message(call.message.chat.id, 'Правильно!')
+    bot.send_message(call.message.chat.id,'Чтобы продолжить обучение, жми /study')
+
+@bot.callback_query_handler(func=lambda call: call.data == 'quiz_eng_wrong')
+def send_study(call):
+    bot.send_message(call.message.chat.id, 'неравильно!')
 # ----------------------------------------------------------
 bot.polling(none_stop=True)
