@@ -31,8 +31,8 @@ VALUES (?, ?, ?, ?);"""
 
 # ----------------------------------------------------------
 
-correct_word_in_russian=''
-
+correct_word_in_russian_from_eng=''
+correct_word_in_russian_from_deu=''
 # Функции для получения и сохранения языков:
 def get_languages(user_id):
 
@@ -64,12 +64,32 @@ def after_text_2(message):
     sqllite_db.connection.commit()
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     #здесь нужен инлайн
-    item1 = types.KeyboardButton("Да")
+    item1 = types.KeyboardButton("Да eng")
     markup.add(item1)
     item1 = types.KeyboardButton("Выйти в главное меню")
     markup.add(item1)
     bot.send_message(message.chat.id,"Продолжить добавлять слова?",reply_markup=markup)
 
+def after_text_1(message):
+
+    mes = message.text
+    info = sqllite_db.cursor.execute('SELECT * FROM users WHERE user_id=?', (message.from_user.id,))
+    record = info.fetchone()
+    if record[3] != None:
+        vocabulary = record[2]
+    else:
+        vocabulary = ""
+    help_string = str(vocabulary) + str(mes) + ","
+    sqllite_db.cursor.execute('UPDATE users SET vocabulary_deu = ? WHERE user_id = ?',
+                                  (help_string, message.from_user.id))
+    sqllite_db.connection.commit()
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    #здесь нужен инлайн
+    item1 = types.KeyboardButton("Да deu")
+    markup.add(item1)
+    item1 = types.KeyboardButton("Выйти в главное меню")
+    markup.add(item1)
+    bot.send_message(message.chat.id,"Продолжить добавлять слова?",reply_markup=markup)
 
 
 # ----------------------------------------------------------
@@ -107,7 +127,10 @@ def study(message):
             help_string += split_user_languages[i] + "\n"
 
         if help_string == "\n":
-            bot.send_message(message.chat.id, "Вы еще не выбрали ни одного языка :(")
+            markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            markup.add(types.KeyboardButton("Выйти в главное меню"))
+            bot.send_message(message.chat.id, "Вы еще не выбрали ни одного языка :(", reply_markup=markup)
+
         else:
             markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
             # здесь нужен инлайн
@@ -171,19 +194,7 @@ def new_language_message(message):
     bot.send_message(message.chat.id, "Выберите язык", reply_markup=markup)
 
 
-@bot.message_handler(commands=['my_languages'])
-def get_my_languages_message(message):
 
-    users_languages = get_languages(message.from_user.id)
-    split_user_languages = re.split("&", users_languages)
-    help_string = ""
-    for i in range(0, len(split_user_languages)):
-        help_string += split_user_languages[i] + "\n"
-
-    if help_string == "\n":
-        bot.send_message(message.chat.id, "Вы еще не выбрали ни одного языка :(")
-    else:
-        bot.send_message(message.chat.id, help_string)
 
 
 
@@ -195,11 +206,16 @@ def add_to_eng_vocabulary(message):
         msg = bot.send_message(message.from_user.id, "Запиши слово, которое хочешь добавить в словарь в таком формате: *слово* ")
         bot.register_next_step_handler(msg, after_text_2)
 
+@bot.message_handler(commands=['vocab_deu'])
+def add_to_deu_vocabulary(message):
 
+
+        msg = bot.send_message(message.from_user.id, "Запиши слово, которое хочешь добавить в словарь в таком формате: *слово* ")
+        bot.register_next_step_handler(msg, after_text_1)
 
 
 @bot.message_handler(commands=['get_eng_vocab'])
-def new_language_message(message):
+def get_eng_vocabe(message):
     info = sqllite_db.cursor.execute('SELECT * FROM users WHERE user_id=?', (message.from_user.id,))
     record = info.fetchall()
     for row in record:
@@ -220,70 +236,160 @@ def new_language_message(message):
         file_to_send.close()
         Path('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_eng.txt'.format(message.chat.id)).unlink()
     else:
-        bot.send_message(message.from_user.id,
-                         "Ваш словарь пуст :(")
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        markup.add(types.KeyboardButton("Выйти в главное меню"))
+        bot.send_message(message.chat.id, "Ваш словарь пуст :(", reply_markup=markup)
+
+@bot.message_handler(commands=['get_deu_vocab'])
+def get_deu_vocab(message):
+    info = sqllite_db.cursor.execute('SELECT * FROM users WHERE user_id=?', (message.from_user.id,))
+    record = info.fetchall()
+    for row in record:
+        vocab_as_a_string = row[3]
+    if vocab_as_a_string!=None:
+        vocab = vocab_as_a_string.split(",")
+        file = Path('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_deu.txt'.format(message.chat.id)).touch()
+        print(vocab)
+        with open(Path('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_deu.txt'.format(message.chat.id)),"w") as f:
+            for i in range(len(vocab)):
+                result = translator.translate(vocab[i])
+                if vocab[i]=="":
+                    continue
+                else:
+                    f.write(vocab[i] + " - " + result.text + "\n")
+        file_to_send = open(Path('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_deu.txt'.format(message.chat.id)), "r")
+        bot.send_document(message.chat.id, file_to_send)
+        file_to_send.close()
+        Path('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_deu.txt'.format(message.chat.id)).unlink()
+    else:
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        markup.add(types.KeyboardButton("Выйти в главное меню"))
+        bot.send_message(message.chat.id, "Ваш словарь пуст :(", reply_markup=markup)
 
 @bot.message_handler(commands=['quiz_eng'])
-def new_language_message(message):
-    if vocab_as_a_string != None:
+def quiz_eng(message):
+
         info = sqllite_db.cursor.execute('SELECT * FROM users WHERE user_id=?', (message.from_user.id,))
         record = info.fetchall()
         for row in record:
             vocab_as_a_string = row[2]
+        if vocab_as_a_string != None:
+            vocab = vocab_as_a_string.split(",")[:-1]
+            if len(vocab)<4:
+
+                markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+                markup.add(types.KeyboardButton("Выйти в главное меню"))
+                bot.send_message(message.chat.id, "Вы еще не набрали достаточное количество слов для квиза :(", reply_markup=markup)
+            else:
+                words = random.sample(vocab, k=4)
+                i = random.randint(0,4)
+                print(i)
+                correct_word = translator.translate(words[i],  src='en', dest='ru')
+                #это для проверки после ввода пользователя
+                print(words[i])
+                global correct_word_in_russian_from_eng
+                correct_word_in_russian_from_eng = correct_word.text
+                #это для создания самого квиза, то есть по какому слову мы делаем квиз
+                correct_word_in_english = words[i]
+                #это для кнопок переводим слова
+                translated_words = []
+                for m in range(len(words)):
+                    result1 = translator.translate(words[m], src='en', dest='ru')
+                    translated_words.append(result1.text)
+
+                markup = types.InlineKeyboardMarkup()
+                for j in range(len(translated_words)):
+                    # the actual creation of the button
+                    if translated_words[j]==correct_word_in_russian_from_eng:
+                        item = types.InlineKeyboardButton(text=translated_words[j], callback_data="quiz_eng_right")
+                    else:
+                        item = types.InlineKeyboardButton(text=translated_words[j], callback_data="quiz_eng_wrong")
+                    markup.add(item)
+                bot.send_message(message.chat.id, "Выберите перевод слова "+correct_word_in_english, reply_markup=markup)
+                words=[]
+                translated_words=[]
+        else:
+
+            markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            markup.add(types.KeyboardBut % ton("Выйти в главное меню"))
+            bot.send_message(message.chat.id, "Ваш словарь пуст :(", reply_markup=markup)
+
+
+
+@bot.message_handler(commands=['quiz_deu'])
+def quiz_deu(message):
+    if vocab_as_a_string != None:
+        info = sqllite_db.cursor.execute('SELECT * FROM users WHERE user_id=?', (message.from_user.id,))
+        record = info.fetchall()
+        for row in record:
+            vocab_as_a_string = row[3]
         vocab = vocab_as_a_string.split(",")[:-1]
         if len(vocab)<4:
-            bot.send_message(message.chat.id, "Вы еще не набрали достаточное количество слов для квиза :(")
+
+            markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            markup.add(types.KeyboardBut % ton("Выйти в главное меню"))
+            bot.send_message(message.chat.id, "Вы еще не набрали достаточное количество слов для квиза :(", reply_markup=markup)
         else:
             words = random.sample(vocab, k=4)
             i = random.randint(0,4)
             print(i)
-            correct_word = translator.translate(words[i],  src='en', dest='ru')
+            correct_word = translator.translate(words[i],  src='de', dest='ru')
             #это для проверки после ввода пользователя
             print(words[i])
-            global correct_word_in_russian
-            correct_word_in_russian = correct_word.text
+            global correct_word_in_russian_from_deu
+            correct_word_in_russian_from_deu = correct_word.text
             #это для создания самого квиза, то есть по какому слову мы делаем квиз
             correct_word_in_english = words[i]
             #это для кнопок переводим слова
             translated_words = []
             for m in range(len(words)):
-                result1 = translator.translate(words[m], src='en', dest='ru')
+                result1 = translator.translate(words[m], src='de', dest='ru')
                 translated_words.append(result1.text)
-            print(translated_words)
-            print(correct_word_in_russian)
+
             markup = types.InlineKeyboardMarkup()
             for j in range(len(translated_words)):
                 # the actual creation of the button
-                if translated_words[j]==correct_word_in_russian:
-                    item = types.InlineKeyboardButton(text=translated_words[j], callback_data="quiz_eng_right")
+                if translated_words[j]==correct_word_in_russian_from_deu:
+                    item = types.InlineKeyboardButton(text=translated_words[j], callback_data="quiz_deu_right")
                 else:
-                    item = types.InlineKeyboardButton(text=translated_words[j], callback_data="quiz_eng_wrong")
+                    item = types.InlineKeyboardButton(text=translated_words[j], callback_data="quiz_deu_wrong")
                 markup.add(item)
             bot.send_message(message.chat.id, "Выберите перевод слова "+correct_word_in_english, reply_markup=markup)
             words=[]
             translated_words=[]
     else:
-        bot.send_message(message.chat.id, "Ваш словарь пуст :(")
 
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        markup.add(types.KeyboardBut % ton("Выйти в главное меню"))
+        bot.send_message(message.chat.id, "Ваш словарь пуст :(",
+                         reply_markup=markup)
 
 @bot.message_handler(content_types=['text'])
 def languages_handling(message):
     a = telebot.types.ReplyKeyboardRemove()
-    if message.text == "Да":
+    if message.text == "Да eng":
         keyboard1 = types.InlineKeyboardMarkup()
         msg = bot.send_message(message.from_user.id,
                                "Запиши слово, которое хочешь добавить в словарь в таком формате: *слово* ")
         bot.register_next_step_handler(msg, after_text_2)
     # if message.text == "Вернуться в главное меню":
     #     #сюда бахнуть функционал стади
-    if message.text=="Продолжить квиз":
+    if message.text=="Да deu":
+        keyboard1 = types.InlineKeyboardMarkup()
+        msg = bot.send_message(message.from_user.id,
+                               "Запиши слово, которое хочешь добавить в словарь в таком формате: *слово* ")
+        bot.register_next_step_handler(msg, after_text_1)
+    if message.text=="Продолжить квиз на английском":
         info = sqllite_db.cursor.execute('SELECT * FROM users WHERE user_id=?', (message.from_user.id,))
         record = info.fetchall()
         for row in record:
             vocab_as_a_string = row[2]
         vocab = vocab_as_a_string.split(",")[:-1]
         if len(vocab) < 4:
-            bot.send_message(message.chat.id, "Вы еще не набрали достаточное количество слов для квиза :(")
+            markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            markup.add(types.KeyboardBut % ton("Выйти в главное меню"))
+            bot.send_message(message.chat.id, "Вы еще не набрали достаточное количество слов для квиза :(",
+                             reply_markup=markup)
         else:
             words = random.sample(vocab, k=4)
             i = random.randint(0, 3)
@@ -292,7 +398,7 @@ def languages_handling(message):
             # это для проверки после ввода пользователя
             print(words[i])
 
-            correct_word_in_russian = correct_word.text
+            correct_word_in_russian_from_eng = correct_word.text
             # это для создания самого квиза, то есть по какому слову мы делаем квиз
             correct_word_in_english = words[i]
             # это для кнопок переводим слова
@@ -300,15 +406,54 @@ def languages_handling(message):
             for m in range(len(words)):
                 result1 = translator.translate(words[m], src='en', dest='ru')
                 translated_words.append(result1.text)
-            print(translated_words)
-            print(correct_word_in_russian)
+
             markup = types.InlineKeyboardMarkup()
             for j in range(len(translated_words)):
                 # the actual creation of the button
-                if translated_words[j] == correct_word_in_russian:
+                if translated_words[j] == correct_word_in_russian_from_eng:
                     item = types.InlineKeyboardButton(text=translated_words[j], callback_data="quiz_eng_right")
                 else:
                     item = types.InlineKeyboardButton(text=translated_words[j], callback_data="quiz_eng_wrong")
+                markup.add(item)
+            bot.send_message(message.chat.id, "Выберите перевод слова " + correct_word_in_english, reply_markup=markup)
+            words = []
+            translated_words = []
+
+    if message.text == "Продолжить квиз на немецком":
+        info = sqllite_db.cursor.execute('SELECT * FROM users WHERE user_id=?', (message.from_user.id,))
+        record = info.fetchall()
+        for row in record:
+            vocab_as_a_string = row[3]
+        vocab = vocab_as_a_string.split(",")[:-1]
+        if len(vocab) < 4:
+            markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            markup.add(types.KeyboardBut % ton("Выйти в главное меню"))
+            bot.send_message(message.chat.id, "Вы еще не набрали достаточное количество слов для квиза :(",
+                             reply_markup=markup)
+        else:
+            words = random.sample(vocab, k=4)
+            i = random.randint(0, 4)
+            print(i)
+            correct_word = translator.translate(words[i], src='de', dest='ru')
+            # это для проверки после ввода пользователя
+            print(words[i])
+            global correct_word_in_russian_from_deu
+            correct_word_in_russian_from_deu = correct_word.text
+            # это для создания самого квиза, то есть по какому слову мы делаем квиз
+            correct_word_in_english = words[i]
+            # это для кнопок переводим слова
+            translated_words = []
+            for m in range(len(words)):
+                result1 = translator.translate(words[m], src='de', dest='ru')
+                translated_words.append(result1.text)
+
+            markup = types.InlineKeyboardMarkup()
+            for j in range(len(translated_words)):
+                # the actual creation of the button
+                if translated_words[j] == correct_word_in_russian_from_deu:
+                    item = types.InlineKeyboardButton(text=translated_words[j], callback_data="quiz_deu_right")
+                else:
+                    item = types.InlineKeyboardButton(text=translated_words[j], callback_data="quiz_deu_wrong")
                 markup.add(item)
             bot.send_message(message.chat.id, "Выберите перевод слова " + correct_word_in_english, reply_markup=markup)
             words = []
@@ -325,7 +470,9 @@ def languages_handling(message):
                 help_string += split_user_languages[i] + "\n"
 
             if help_string == "\n":
-                bot.send_message(message.chat.id, "Вы еще не выбрали ни одного языка :(")
+                markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+                markup.add(types.KeyboardBut%ton("Выйти в главное меню"))
+                bot.send_message(message.chat.id, "Вы еще не выбрали ни одного языка :(", reply_markup=markup)
             else:
                 markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
                 # здесь нужен инлайн
@@ -383,7 +530,7 @@ def languages_handling(message):
 @bot.callback_query_handler(func=lambda call: call.data == 'quiz_eng_right')
 def send_study(call):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    item = types.KeyboardButton("Продолжить квиз")
+    item = types.KeyboardButton("Продолжить квиз на английском")
     markup.add(item)
     item = types.KeyboardButton("Выйти в главное меню")
     markup.add(item)
@@ -392,11 +539,30 @@ def send_study(call):
 @bot.callback_query_handler(func=lambda call: call.data == 'quiz_eng_wrong')
 def send_study(call):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    item = types.KeyboardButton("Продолжить квиз")
+    item = types.KeyboardButton("Продолжить квиз на английском")
     markup.add(item)
     item = types.KeyboardButton("Выйти в главное меню")
     markup.add(item)
-    bot.send_message(call.message.chat.id, 'Неправильно! Правильный перевод '+correct_word_in_russian+'. Если хочешь продолжить квиз, жми продолжить.',
+    bot.send_message(call.message.chat.id, 'Неправильно! Правильный перевод '+correct_word_in_russian_from_eng+'. Если хочешь продолжить квиз, жми продолжить.',
                      reply_markup=markup)
+
+@bot.callback_query_handler(func=lambda call: call.data == 'quiz_deu_wrong')
+def send_study(call):
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    item = types.KeyboardButton("Продолжить квиз на немецком")
+    markup.add(item)
+    item = types.KeyboardButton("Выйти в главное меню")
+    markup.add(item)
+    bot.send_message(call.message.chat.id, 'Неправильно! Правильный перевод '+correct_word_in_russian_from_deu+'. Если хочешь продолжить квиз, жми продолжить.',
+                     reply_markup=markup)
+
+@bot.callback_query_handler(func=lambda call: call.data == 'quiz_deu_right')
+def send_study(call):
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    item = types.KeyboardButton("Продолжить квиз на немецком")
+    markup.add(item)
+    item = types.KeyboardButton("Выйти в главное меню")
+    markup.add(item)
+    bot.send_message(call.message.chat.id, 'Правильно! Если хочешь продолжить квиз, жми продолжить.', reply_markup=markup)
 # ----------------------------------------------------------
 bot.polling(none_stop=True)
