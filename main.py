@@ -9,7 +9,10 @@ import googletrans
 from googletrans import Translator
 import sqllite_db
 import random
-
+import multiprocessing
+import schedule
+import datetime
+import time
 # Токен и создание бота
 
 token = '5305392177:AAGRLxjBJ43TgZSo7qC8XoXRJ75bKCzh7Fk'
@@ -26,8 +29,8 @@ languages = ["🇬🇧 English", "🇩🇪 Deutsch", "🇷🇺 Русский"]
 
 create_users = """
 INSERT INTO users 
-   (user_id, languages,vocabulary_eng, vocabulary_deu)
-VALUES (?, ?, ?, ?);"""
+   (user_id, languages,vocabulary_eng, vocabulary_deu, days, report)
+VALUES (?, ?, ?, ?, ?, ?);"""
 
 # ----------------------------------------------------------
 
@@ -46,6 +49,43 @@ def set_language(user_id, language):
     help_language = get_languages(user_id) + language + "&"
     sqllite_db.cursor.execute('UPDATE users SET languages = ? WHERE user_id = ?', (help_language, user_id))
     sqllite_db.connection.commit()
+
+# Функции для получения дней недели
+def get_days(user_id):
+    info = sqllite_db.cursor.execute('SELECT * FROM users WHERE user_id=?', (user_id,))
+    record = info.fetchone()
+    return record[4]
+
+
+def set_day(user_id, day):
+    help_day = get_days(user_id) + day + "&"
+    sqllite_db.cursor.execute('UPDATE users SET days = ? WHERE user_id = ?', (help_day, user_id))
+    sqllite_db.connection.commit()
+
+
+# Функции для отправления сообщений по времени
+def nine(id):
+    bot.send_message(id, "Новый день - новая жизнь! Пора продолжать изучать твой любимый иностранный язык!"
+                         " Не забудь, что вечером мы будем ждать твой отчет об проделанной работе.")
+
+
+def four(id):
+    bot.send_message(id, "Прошло уже пол дня! А ты уже сел за изучения иностранных? Если нет - то самое время."
+                         " Не забудь, что вечером мы будем ждать твой отчет об проделанной работе.")
+
+
+def ten(id):
+    bot.send_message(id, "Нужно больше ОТЧЕТОВ!!! День прошел, он же был продуктивный, да..? Это мы сейчас и узнаем!")
+
+
+def get_report(message):
+    mes = message.text
+    print(mes)
+    info = sqllite_db.cursor.execute('SELECT report FROM users WHERE user_id=?', (message.from_user.id,))
+    record = info.fetchone()
+    update = record + "&" + mes
+    sqllite_db.cursor.execute('UPDATE users SET report = ? WHERE user_id = ?',
+                              (update, message.from_user.id))
 
 
 #сюда закидывается слово из vocab_eng
@@ -106,7 +146,7 @@ def start_message(message):
                                                                                      "Study language bot поможет тебе в изучении разных иностранных языков.\n" \
                                                                                      "Введи /help для того, чтобы посмотреть функционал.")
 
-        person_data = (message.from_user.id, "", None,None)
+        person_data = (message.from_user.id, "", None,None, "", "")
         sqllite_db.cursor.execute(create_users, person_data)
         sqllite_db.connection.commit()
 
@@ -195,6 +235,22 @@ def new_language_message(message):
 
 
 
+@bot.message_handler(commands=['remind'])
+def remind_message(message):
+    days = ["Понедельник🥱", "Вторник☹", "Среда😑", "Четверг🙂", "Пятница☺", "Суббота😎", "Воскресение🤪"]
+    users_days = get_days(message.from_user.id)
+    split_user_days = re.split("&", users_days)
+    for i in range(0, len(split_user_days)):
+        if days.__contains__(split_user_days[i]):
+            days.remove(split_user_days[i])
+    if days == []:
+        bot.send_message(message.chat.id, "Вы и так уже занимаетесь каждый день!")
+    else:
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        for i in range(0, len(days)):
+            item = types.KeyboardButton(days[i])
+            markup.add(item)
+        bot.send_message(message.chat.id, "Выберите день недели", reply_markup=markup)
 
 
 
@@ -471,7 +527,7 @@ def languages_handling(message):
 
             if help_string == "\n":
                 markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-                markup.add(types.KeyboardBut%ton("Выйти в главное меню"))
+                markup.add(types.KeyboardButton("Выйти в главное меню"))
                 bot.send_message(message.chat.id, "Вы еще не выбрали ни одного языка :(", reply_markup=markup)
             else:
                 markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -490,6 +546,25 @@ def languages_handling(message):
         else:
             bot.send_message(message.chat.id, "Введите /start")
 
+
+    if message.text == "Понедельник🥱" or message.text == "Вторник☹" or message.text == "Среда😑" or message.text == "Четверг🙂" \
+            or message.text == "Пятница☺" or message.text == "Суббота😎" or message.text == "Воскресение🤪":
+        str = message.text
+        set_day(message.from_user.id, str)
+        sqllite_db.connection.commit()
+        newstr = str[:-1]
+        if newstr == "Понедельник" or newstr == "Вторник" or newstr == "Четверг":
+            bot.send_message(message.chat.id,
+                             newstr + ' был добавлен в ваше расписание \n Чтобы продолжить обучение, жми /study',
+                             reply_markup=a)
+        if newstr == "Среда" or newstr == "Пятница" or newstr == "Суббота":
+            bot.send_message(message.chat.id,
+                             newstr + ' была добавлена в ваше расписание \n Чтобы продолжить обучение, жми /study',
+                             reply_markup=a)
+        if newstr == "Воскресение":
+            bot.send_message(message.chat.id,
+                             newstr + ' было добавлено в ваше расписание \n Чтобы продолжить обучение, жми /study',
+                             reply_markup=a)
     if message.text == "🇬🇧 English":
         str = "🇬🇧 English"
         bot.send_message(message.chat.id, 'Now you are a englishman \n Чтобы продолжить обучение, жми /study', reply_markup=a)
@@ -565,4 +640,68 @@ def send_study(call):
     markup.add(item)
     bot.send_message(call.message.chat.id, 'Правильно! Если хочешь продолжить квиз, жми продолжить.', reply_markup=markup)
 # ----------------------------------------------------------
-bot.polling(none_stop=True)
+def start_process():  # Запуск Process
+    multiprocessing.Process(target=P_schedule.start_schedule, args=()).start()
+
+
+class P_schedule():  # Class для работы с schedule
+    def start_schedule():  # Запуск schedule
+        ######Параметры для schedule######
+        schedule.every().day.at("09:00").do(P_schedule.send_message1)
+        schedule.every().day.at("16:00").do(P_schedule.send_message1)
+        schedule.every().day.at("22:00").do(P_schedule.send_message1)
+        schedule.every().sunday.at("23:00").do(P_schedule.send_message2)
+
+        # schedule.every(10).seconds.do(P_schedule.send_message1)
+        # schedule.every(1).minutes.do(P_schedule.send_message2)
+        ##################################
+
+        while True:  # Запуск цикла
+            schedule.run_pending()
+            time.sleep(1)
+
+    ####Функции для выполнения заданий по времени
+    def send_message1():
+        days = ["Понедельник🥱", "Вторник☹", "Среда😑", "Четверг🙂", "Пятница☺", "Суббота😎", "Воскресение🤪"]
+        currentDay = datetime.datetime.today().weekday()
+        info = sqllite_db.cursor.execute('SELECT user_id, days FROM users')
+        record = info.fetchall()
+        currentDay_text = days[currentDay]
+        print(currentDay_text)
+        for i in range(0, len(record)):
+            weekdays = record[i]
+            id = weekdays[0]
+            day = weekdays[1]
+            split_user_days = re.split("&", day)
+            for j in range(0, len(split_user_days)):
+                if split_user_days[j] == currentDay_text:
+                    if datetime.datetime.today().time().hour == 9:
+                        nine(id)
+                    if datetime.datetime.today().time().hour == 16:
+                        four(id)
+                    if datetime.datetime.today().time().hour == 22:
+                        ten(id)
+                        msg = bot.send_message(id,
+                                               "Присылай свой отчет следующим сообщением.")
+                        bot.register_next_step_handler(msg, get_report)
+
+    def send_message2():
+        info = sqllite_db.cursor.execute('SELECT user_id, report FROM users')
+        record = info.fetchall()
+        for i in range(0, len(record)):
+            split_report = re.split("&", record[i][1])
+            for j in range(0, len(split_report)):
+                help_string = split_report[j] + "\n\n"
+            print(help_string)
+            bot.send_message(record[i][0],
+                             "Ну что ж, время для самопроверки, вот твои ответы за эту неделю:" + help_string)
+    ################
+
+
+if __name__ == '__main__':
+    start_process()
+    try:
+        bot.polling(none_stop=True)
+    except:
+        pass
+
