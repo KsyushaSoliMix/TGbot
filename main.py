@@ -23,9 +23,9 @@ bot = telebot.TeleBot(token)
 
 # Переменные для команд
 
-translator = Translator(service_urls=['translate.googleapis.com'])
+translator = Translator()
 
-languages = ["🇬🇧 English", "🇩🇪 Deutsch", "🇷🇺 Русский"]
+languages = ["🇬🇧 English", "🇩🇪 Deutsch"]
 
 create_users = """
 INSERT INTO users 
@@ -67,17 +67,20 @@ def set_day(user_id, day):
 # Функции для отправления сообщений по времени
 def nine(id):
     bot.send_message(id, "Новый день - новая жизнь! Пора продолжать изучать твой любимый иностранный язык!"
-                         " Не забудь, что вечером мы будем ждать твой отчет о проделанной работе.\nВводи команду /study, чтобы продолжить обучение. ")
+                         "Не забудь, что вечером мы будем ждать твой отчет о проделанной работе.\nВводи команду "
+                         "/study, чтобы продолжить обучение. ")
 
 
 def four(id):
     bot.send_message(id, "Прошло уже пол дня! А ты уже сел за изучения иностранных? Если нет - то самое время."
-                         " Не забудь, что вечером мы будем ждать твой отчет о проделанной работе.\nВводи команду /study, чтобы продолжить обучение. ")
+                         "Не забудь, что вечером мы будем ждать твой отчет о проделанной работе.\nВводи команду "
+                         "/study, чтобы продолжить обучение. ")
 
 
 def ten(id):
     bot.send_message(id,
-                     "Нужно больше ОТЧЕТОВ!!! День прошел, он же был продуктивный, да..? Это мы сейчас и узнаем!\n Присылай свой отчет следующим сообщением и иди отдыхай.\n"
+                     "Нужно больше ОТЧЕТОВ!!! День прошел, он же был продуктивный, да..? Это мы сейчас и узнаем!\n "
+                     "Присылай свой отчет следующим сообщением и иди отдыхай.\n "
                      "Если отдыхать не хочется, то жми /study и погнали дальше!")
 
 
@@ -165,7 +168,6 @@ def study(message):
 
         else:
             markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-            # здесь нужен инлайн
             for i in range(len(split_user_languages)):
                 if split_user_languages[i] == "🇬🇧 English":
                     item = types.KeyboardButton("English")
@@ -266,21 +268,19 @@ def get_eng_vocabe(message):
         vocab_as_a_string = row[2]
     if vocab_as_a_string != None:
         vocab = vocab_as_a_string.split(",")
-        file = Path('C:\\Users\\temas\\PycharmProjects\\TGbot\\{}_eng.txt'.format(message.chat.id)).touch()
+        file = Path('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_eng.txt'.format(message.chat.id)).touch()
         print(vocab)
-        with open(Path('C:\\Users\\temas\\PycharmProjects\\TGbot\\{}_eng.txt'.format(message.chat.id)),
+        with open(Path('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_eng.txt'.format(message.chat.id)),
                   "w") as f:
             for i in range(len(vocab)):
-                result = translator.translate(vocab[i])
-                if vocab[i] == "":
-                    continue
-                else:
-                    f.write(vocab[i] + " - " + result.text + "\n")
-        file_to_send = open(Path('C:\\Users\\temas\\PycharmProjects\\TGbot\\{}_eng.txt'.format(message.chat.id)),
+                if vocab[i]!="":
+                    result = translator.translate(vocab[i],src="en",dest="ru")
+                    f.write(vocab[i]+" - "+result.text+"\n")
+        file_to_send = open('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_eng.txt'.format(message.chat.id),
                             "r")
         bot.send_document(message.chat.id, file_to_send)
         file_to_send.close()
-        Path('C:\\Users\\temas\\PycharmProjects\\TGbot\\{}_eng.txt'.format(message.chat.id)).unlink()
+        Path('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_eng.txt'.format(message.chat.id)).unlink()
     else:
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
         markup.add(types.KeyboardButton("Выйти в главное меню"))
@@ -295,21 +295,19 @@ def get_deu_vocab(message):
         vocab_as_a_string = row[3]
     if vocab_as_a_string != None:
         vocab = vocab_as_a_string.split(",")
-        file = Path('C:\\Users\\temas\\PycharmProjects\\TGbot\\{}_deu.txt'.format(message.chat.id)).touch()
+        file = Path('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_deu.txt'.format(message.chat.id)).touch()
         print(vocab)
-        with open(Path('C:\\Users\\temas\\PycharmProjects\\TGbot\\{}_deu.txt'.format(message.chat.id)),
+        with open(Path('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_deu.txt'.format(message.chat.id)),
                   "w") as f:
             for i in range(len(vocab)):
-                result = translator.translate(vocab[i])
-                if vocab[i] == "":
-                    continue
-                else:
-                    f.write(vocab[i] + " - " + result.text + "\n")
-        file_to_send = open(Path('C:\\Users\\temas\\PycharmProjects\\TGbot\\{}_deu.txt'.format(message.chat.id)),
+                for i in range(len(vocab)):
+                    if vocab[i] != "":
+                        result = translator.translate(vocab[i], src="de", dest="ru")
+        file_to_send = open(Path('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_deu.txt'.format(message.chat.id)),
                             "r")
         bot.send_document(message.chat.id, file_to_send)
         file_to_send.close()
-        Path('C:\\Users\\temas\\PycharmProjects\\TGbot\\{}_deu.txt'.format(message.chat.id)).unlink()
+        Path('C:\\Users\\Natasha\\PycharmProjects\\TGbot_orig\\{}_deu.txt'.format(message.chat.id)).unlink()
     else:
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
         markup.add(types.KeyboardButton("Выйти в главное меню"))
@@ -332,9 +330,9 @@ def quiz_eng(message):
                              reply_markup=markup)
         else:
             words = random.sample(vocab, k=4)
-            i = random.randint(0, 3)
+            i = random.randint(0, 4)
             print(i)
-            correct_word = translator.translate(words[i], src='en', dest='ru',)
+            correct_word = translator.translate(words[i], src='en', dest='ru')
             # это для проверки после ввода пользователя
             print(words[i])
             global correct_word_in_russian_from_eng
@@ -527,7 +525,7 @@ def languages_handling(message):
             if help_string == "\n":
                 markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
                 markup.add(types.KeyboardButton("Выйти в главное меню"))
-                bot.send_message(message.chat.id, "Вы еще не выбрали ни одного языка :(", reply_markup=markup)
+                bot.send_message(message.chat.id, "Вы еще не выбрали ни одного языка :( \n Жми \study, чтобы продолжить", reply_markup=markup)
             else:
                 markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
                 # здесь нужен инлайн
@@ -653,9 +651,9 @@ def start_process():  # Запуск Process
 class P_schedule():  # Class для работы с schedule
     def start_schedule():  # Запуск schedule
         ######Параметры для schedule######
-        schedule.every().day.at("09:00").do(P_schedule.send_message1)
-        schedule.every().day.at("16:00").do(P_schedule.send_message1)
-        schedule.every().day.at("22:00").do(P_schedule.send_message1)
+        schedule.every().day.at("22:30").do(P_schedule.send_message1)
+        schedule.every().day.at("22:40").do(P_schedule.send_message1)
+        schedule.every().day.at("12:00").do(P_schedule.send_message1)
         ##################################
 
         while True:  # Запуск цикла
@@ -677,11 +675,11 @@ class P_schedule():  # Class для работы с schedule
             split_user_days = re.split("&", day)
             for j in range(0, len(split_user_days)):
                 if split_user_days[j] == currentDay_text:
-                    if datetime.datetime.today().time().hour == 9:
+                    if datetime.datetime.today().time().minute == 30:
                         nine(id)
-                    if datetime.datetime.today().time().hour == 16:
+                    if datetime.datetime.today().time().minute == 40:
                         four(id)
-                    if datetime.datetime.today().time().hour == 22:
+                    if datetime.datetime.today().time().minute == 40:
                         ten(id)
     ################
 
@@ -691,4 +689,5 @@ if __name__ == '__main__':
     try:
         bot.polling(none_stop=True)
     except:
-       pass
+        pass
+
