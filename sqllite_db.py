@@ -30,8 +30,7 @@ CREATE TABLE IF NOT EXISTS users (
   languages TEXT,
   vocabulary_eng TEXT,
   vocabulary_deu TEXT,
-  days TEXT,
-  report TEXT
+  days TEXT
 );
 """
 
